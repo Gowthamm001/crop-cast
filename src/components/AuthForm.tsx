@@ -7,6 +7,8 @@ import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
 import { Sprout } from "lucide-react";
+import { useLanguage } from "@/contexts/LanguageContext";
+import { LanguageSwitcher } from "./LanguageSwitcher";
 
 export const AuthForm = () => {
   const [isLogin, setIsLogin] = useState(true);
@@ -16,6 +18,7 @@ export const AuthForm = () => {
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
   const { toast } = useToast();
+  const { t } = useLanguage();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -28,7 +31,7 @@ export const AuthForm = () => {
           password,
         });
         if (error) throw error;
-        toast({ title: "Welcome back!", description: "Successfully logged in" });
+        toast({ title: t("welcomeBack"), description: "Successfully logged in" });
         navigate("/app");
       } else {
         const { error } = await supabase.auth.signUp({
@@ -39,7 +42,7 @@ export const AuthForm = () => {
           },
         });
         if (error) throw error;
-        toast({ title: "Account created!", description: "You can now log in" });
+        toast({ title: t("accountCreated"), description: "You can now log in" });
         setIsLogin(true);
       }
     } catch (error: any) {
@@ -55,21 +58,24 @@ export const AuthForm = () => {
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-primary/10 via-background to-accent/10 p-4">
+      <div className="absolute top-4 right-4">
+        <LanguageSwitcher />
+      </div>
       <Card className="w-full max-w-md">
         <CardHeader className="text-center">
           <div className="flex justify-center mb-4">
             <Sprout className="h-12 w-12 text-primary" />
           </div>
-          <CardTitle className="text-2xl">CropAI Advisor</CardTitle>
+          <CardTitle className="text-2xl">{t("appTitle")}</CardTitle>
           <CardDescription>
-            {isLogin ? "Sign in to get crop recommendations" : "Create an account to get started"}
+            {isLogin ? t("signInPrompt") : t("signUpPrompt")}
           </CardDescription>
         </CardHeader>
         <CardContent>
           <form onSubmit={handleSubmit} className="space-y-4">
             {!isLogin && (
               <div className="space-y-2">
-                <Label htmlFor="username">Username</Label>
+                <Label htmlFor="username">{t("username")}</Label>
                 <Input
                   id="username"
                   value={username}
@@ -79,7 +85,7 @@ export const AuthForm = () => {
               </div>
             )}
             <div className="space-y-2">
-              <Label htmlFor="email">Email</Label>
+              <Label htmlFor="email">{t("email")}</Label>
               <Input
                 id="email"
                 type="email"
@@ -89,7 +95,7 @@ export const AuthForm = () => {
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="password">Password</Label>
+              <Label htmlFor="password">{t("password")}</Label>
               <Input
                 id="password"
                 type="password"
@@ -99,7 +105,7 @@ export const AuthForm = () => {
               />
             </div>
             <Button type="submit" className="w-full" disabled={loading}>
-              {loading ? "Loading..." : isLogin ? "Sign In" : "Sign Up"}
+              {loading ? t("loading") : isLogin ? t("login") : t("signup")}
             </Button>
           </form>
           <div className="mt-4 text-center text-sm">
@@ -108,7 +114,7 @@ export const AuthForm = () => {
               onClick={() => setIsLogin(!isLogin)}
               className="text-primary hover:underline"
             >
-              {isLogin ? "Need an account? Sign up" : "Already have an account? Sign in"}
+              {isLogin ? t("needAccount") : t("haveAccount")}
             </button>
           </div>
         </CardContent>

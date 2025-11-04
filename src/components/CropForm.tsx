@@ -7,6 +7,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { useToast } from "@/hooks/use-toast";
 import { MapPin, CloudRain } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
+import { useLanguage } from "@/contexts/LanguageContext";
 
 export const CropForm = () => {
   const [nitrogen, setNitrogen] = useState("");
@@ -19,6 +20,7 @@ export const CropForm = () => {
   const [fetchingLocation, setFetchingLocation] = useState(false);
   const navigate = useNavigate();
   const { toast } = useToast();
+  const { t } = useLanguage();
 
   const getLocation = () => {
     setFetchingLocation(true);
@@ -127,14 +129,14 @@ export const CropForm = () => {
   return (
     <Card className="w-full max-w-2xl">
       <CardHeader>
-        <CardTitle>Soil Data Input</CardTitle>
-        <CardDescription>Enter your soil parameters for crop recommendation</CardDescription>
+        <CardTitle>{t("soilDataInput")}</CardTitle>
+        <CardDescription>{t("soilDataDesc")}</CardDescription>
       </CardHeader>
       <CardContent>
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div className="space-y-2">
-              <Label htmlFor="nitrogen">Nitrogen (N)</Label>
+              <Label htmlFor="nitrogen">{t("nitrogen")}</Label>
               <Input
                 id="nitrogen"
                 type="number"
@@ -145,7 +147,7 @@ export const CropForm = () => {
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="phosphorus">Phosphorus (P)</Label>
+              <Label htmlFor="phosphorus">{t("phosphorus")}</Label>
               <Input
                 id="phosphorus"
                 type="number"
@@ -156,7 +158,7 @@ export const CropForm = () => {
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="potassium">Potassium (K)</Label>
+              <Label htmlFor="potassium">{t("potassium")}</Label>
               <Input
                 id="potassium"
                 type="number"
@@ -170,7 +172,7 @@ export const CropForm = () => {
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="space-y-2">
-              <Label htmlFor="ph">pH Level</Label>
+              <Label htmlFor="ph">{t("phLevel")}</Label>
               <Input
                 id="ph"
                 type="number"
@@ -183,7 +185,7 @@ export const CropForm = () => {
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="rainfall">Rainfall (mm)</Label>
+              <Label htmlFor="rainfall">{t("rainfall")}</Label>
               <Input
                 id="rainfall"
                 type="number"
@@ -200,8 +202,8 @@ export const CropForm = () => {
               <MapPin className="h-5 w-5 text-primary" />
               <span className="text-sm">
                 {location
-                  ? `Location: ${location.lat.toFixed(2)}, ${location.lon.toFixed(2)}`
-                  : "No location set"}
+                  ? `${t("location")}: ${location.lat.toFixed(2)}, ${location.lon.toFixed(2)}`
+                  : t("noLocation")}
               </span>
             </div>
             <Button
@@ -210,12 +212,12 @@ export const CropForm = () => {
               onClick={getLocation}
               disabled={fetchingLocation}
             >
-              {fetchingLocation ? "Fetching..." : "Get Location"}
+              {fetchingLocation ? t("fetching") : t("getLocation")}
             </Button>
           </div>
 
           <Button type="submit" className="w-full" disabled={loading || !location}>
-            {loading ? "Analyzing..." : "Get Recommendation"}
+            {loading ? t("analyzing") : t("getRecommendation")}
           </Button>
         </form>
       </CardContent>
