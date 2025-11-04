@@ -1,9 +1,15 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { z } from "https://deno.land/x/zod@v3.22.4/mod.ts";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
+
+const weatherSchema = z.object({
+  lat: z.number().min(-90).max(90),
+  lon: z.number().min(-180).max(180),
+});
 
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
@@ -11,7 +17,8 @@ serve(async (req) => {
   }
 
   try {
-    const { lat, lon } = await req.json();
+    const body = await req.json();
+    const { lat, lon } = weatherSchema.parse(body);
     const apiKey = Deno.env.get('OPENWEATHER_API_KEY');
 
     if (!apiKey) {
@@ -44,9 +51,19 @@ serve(async (req) => {
     });
   } catch (error) {
     console.error('Error in get-weather function:', error);
-    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+    
+    if (error instanceof z.ZodError) {
+      return new Response(
+        JSON.stringify({ error: 'Invalid input parameters' }),
+        {
+          status: 400,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        }
+      );
+    }
+    
     return new Response(
-      JSON.stringify({ error: errorMessage }),
+      JSON.stringify({ error: 'An error occurred processing your request' }),
       {
         status: 500,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },

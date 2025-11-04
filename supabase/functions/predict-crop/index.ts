@@ -1,9 +1,20 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { z } from "https://deno.land/x/zod@v3.22.4/mod.ts";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
+
+const predictionSchema = z.object({
+  nitrogen: z.number().min(0).max(1000),
+  phosphorus: z.number().min(0).max(1000),
+  potassium: z.number().min(0).max(1000),
+  ph: z.number().min(0).max(14),
+  rainfall: z.number().min(0).max(1000),
+  temperature: z.number().min(-50).max(60),
+  humidity: z.number().min(0).max(100),
+});
 
 // Simple crop recommendation logic based on NPK values and environmental conditions
 const predictCrop = (params: {
@@ -118,7 +129,8 @@ serve(async (req) => {
   }
 
   try {
-    const params = await req.json();
+    const body = await req.json();
+    const params = predictionSchema.parse(body);
     console.log('Received prediction request:', params);
 
     const prediction = predictCrop(params);
@@ -128,9 +140,19 @@ serve(async (req) => {
     });
   } catch (error) {
     console.error('Error in predict-crop function:', error);
-    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+    
+    if (error instanceof z.ZodError) {
+      return new Response(
+        JSON.stringify({ error: 'Invalid input parameters' }),
+        {
+          status: 400,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        }
+      );
+    }
+    
     return new Response(
-      JSON.stringify({ error: errorMessage }),
+      JSON.stringify({ error: 'An error occurred processing your request' }),
       {
         status: 500,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },

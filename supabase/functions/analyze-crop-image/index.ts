@@ -1,9 +1,25 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { z } from "https://deno.land/x/zod@v3.22.4/mod.ts";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
+
+const MAX_IMAGE_SIZE = 10 * 1024 * 1024; // 10MB in bytes
+
+const imageSchema = z.object({
+  imageBase64: z.string().refine(
+    (val) => {
+      // Check if it's a valid data URL
+      if (!val.startsWith('data:image/')) return false;
+      // Rough size check (base64 is ~1.37x original size)
+      if (val.length > MAX_IMAGE_SIZE * 1.37) return false;
+      return true;
+    },
+    { message: 'Invalid image format or size exceeds 10MB' }
+  ),
+});
 
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
@@ -11,7 +27,8 @@ serve(async (req) => {
   }
 
   try {
-    const { imageBase64 } = await req.json();
+    const body = await req.json();
+    const { imageBase64 } = imageSchema.parse(body);
     const LOVABLE_API_KEY = Deno.env.get('LOVABLE_API_KEY');
 
     if (!LOVABLE_API_KEY) {
@@ -71,9 +88,19 @@ serve(async (req) => {
     );
   } catch (error) {
     console.error('Error in analyze-crop-image function:', error);
-    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+    
+    if (error instanceof z.ZodError) {
+      return new Response(
+        JSON.stringify({ error: 'Invalid image data' }),
+        {
+          status: 400,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        }
+      );
+    }
+    
     return new Response(
-      JSON.stringify({ error: errorMessage }),
+      JSON.stringify({ error: 'An error occurred processing your request' }),
       {
         status: 500,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
