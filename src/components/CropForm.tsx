@@ -1,26 +1,43 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
+import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
-import { MapPin, CloudRain } from "lucide-react";
-import { supabase } from "@/integrations/supabase/client";
+import { MapPin } from "lucide-react";
 import { useLanguage } from "@/contexts/LanguageContext";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { z } from "zod";
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
+
+const cropSchema = z.object({
+  nitrogen: z.number().min(0, "Must be at least 0").max(1000, "Must be at most 1000"),
+  phosphorus: z.number().min(0, "Must be at least 0").max(1000, "Must be at most 1000"),
+  potassium: z.number().min(0, "Must be at least 0").max(1000, "Must be at most 1000"),
+  ph: z.number().min(0, "Must be at least 0").max(14, "Must be at most 14"),
+  rainfall: z.number().min(0, "Must be at least 0").max(1000, "Must be at most 1000"),
+});
 
 export const CropForm = () => {
-  const [nitrogen, setNitrogen] = useState("");
-  const [phosphorus, setPhosphorus] = useState("");
-  const [potassium, setPotassium] = useState("");
-  const [ph, setPh] = useState("");
-  const [rainfall, setRainfall] = useState("");
   const [location, setLocation] = useState<{ lat: number; lon: number } | null>(null);
   const [loading, setLoading] = useState(false);
   const [fetchingLocation, setFetchingLocation] = useState(false);
   const navigate = useNavigate();
   const { toast } = useToast();
   const { t } = useLanguage();
+
+  const form = useForm<z.infer<typeof cropSchema>>({
+    resolver: zodResolver(cropSchema),
+    defaultValues: {
+      nitrogen: 0,
+      phosphorus: 0,
+      potassium: 0,
+      ph: 7,
+      rainfall: 0,
+    },
+  });
 
   const getLocation = () => {
     setFetchingLocation(true);
@@ -62,12 +79,11 @@ export const CropForm = () => {
     if (cached) setLocation(JSON.parse(cached));
   }, []);
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleSubmit = async (values: z.infer<typeof cropSchema>) => {
     if (!location) {
       toast({
-        title: "Location required",
-        description: "Please fetch your location first",
+        title: "Location Required",
+        description: "Please get your location first",
         variant: "destructive",
       });
       return;
@@ -76,51 +92,73 @@ export const CropForm = () => {
     setLoading(true);
 
     try {
-      const { data: weatherData, error: weatherError } = await supabase.functions.invoke("get-weather", {
-        body: { lat: location.lat, lon: location.lon },
-      });
+      const { data: weatherData, error: weatherError } = await supabase.functions.invoke(
+        "get-weather",
+        {
+          body: { lat: location.lat, lon: location.lon },
+        }
+      );
 
       if (weatherError) throw weatherError;
 
-      const { data: predictionData, error: predictionError } = await supabase.functions.invoke("predict-crop", {
-        body: {
-          nitrogen: parseFloat(nitrogen),
-          phosphorus: parseFloat(phosphorus),
-          potassium: parseFloat(potassium),
-          ph: parseFloat(ph),
-          rainfall: parseFloat(rainfall),
-          temperature: weatherData.temperature,
-          humidity: weatherData.humidity,
-        },
-      });
+      const { data: predictionData, error: predictionError } = await supabase.functions.invoke(
+        "predict-crop",
+        {
+          body: {
+            nitrogen: values.nitrogen,
+            phosphorus: values.phosphorus,
+            potassium: values.potassium,
+            ph: values.ph,
+            rainfall: values.rainfall,
+            temperature: weatherData.temperature,
+            humidity: weatherData.humidity,
+          },
+        }
+      );
 
       if (predictionError) throw predictionError;
 
       const result = {
-        crop: predictionData.crop,
-        confidence: predictionData.confidence,
-        weather: weatherData,
-        soil: { nitrogen, phosphorus, potassium, ph, rainfall },
+        ...predictionData,
+        weather: {
+          temperature: weatherData.temperature,
+          humidity: weatherData.humidity,
+        },
+        soil: {
+          nitrogen: values.nitrogen.toString(),
+          phosphorus: values.phosphorus.toString(),
+          potassium: values.potassium.toString(),
+          ph: values.ph.toString(),
+          rainfall: values.rainfall.toString(),
+        },
         timestamp: new Date().toISOString(),
       };
 
       localStorage.setItem("lastPrediction", JSON.stringify(result));
-      navigate("/result", { state: result });
+
+      navigate("/result", { state: { result } });
     } catch (error: any) {
-      const cached = localStorage.getItem("lastPrediction");
-      if (cached) {
-        toast({
-          title: "Using offline data",
-          description: "Showing your last prediction",
-        });
-        navigate("/result", { state: JSON.parse(cached) });
-      } else {
-        toast({
-          title: "Error",
-          description: error.message || "Failed to get prediction",
-          variant: "destructive",
-        });
+      const cachedPrediction = localStorage.getItem("lastPrediction");
+      if (cachedPrediction) {
+        try {
+          const result = JSON.parse(cachedPrediction);
+          navigate("/result", { 
+            state: { 
+              result,
+              error: "Using cached prediction due to connection error" 
+            }
+          });
+          return;
+        } catch (e) {
+          console.error("Failed to parse cached prediction");
+        }
       }
+      
+      toast({
+        title: "Error",
+        description: error.message || "Failed to get prediction",
+        variant: "destructive",
+      });
     } finally {
       setLoading(false);
     }
@@ -133,93 +171,125 @@ export const CropForm = () => {
         <CardDescription>{t("soilDataDesc")}</CardDescription>
       </CardHeader>
       <CardContent>
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <div className="space-y-2">
-              <Label htmlFor="nitrogen">{t("nitrogen")}</Label>
-              <Input
-                id="nitrogen"
-                type="number"
-                step="0.01"
-                value={nitrogen}
-                onChange={(e) => setNitrogen(e.target.value)}
-                required
+        <Form {...form}>
+          <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <FormField
+                control={form.control}
+                name="nitrogen"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>{t("nitrogen")}</FormLabel>
+                    <FormControl>
+                      <Input 
+                        type="number" 
+                        step="0.1"
+                        {...field}
+                        onChange={(e) => field.onChange(parseFloat(e.target.value) || 0)}
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
+                name="phosphorus"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>{t("phosphorus")}</FormLabel>
+                    <FormControl>
+                      <Input 
+                        type="number" 
+                        step="0.1"
+                        {...field}
+                        onChange={(e) => field.onChange(parseFloat(e.target.value) || 0)}
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
+                name="potassium"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>{t("potassium")}</FormLabel>
+                    <FormControl>
+                      <Input 
+                        type="number" 
+                        step="0.1"
+                        {...field}
+                        onChange={(e) => field.onChange(parseFloat(e.target.value) || 0)}
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
+                name="ph"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>{t("phLevel")}</FormLabel>
+                    <FormControl>
+                      <Input 
+                        type="number" 
+                        step="0.1"
+                        {...field}
+                        onChange={(e) => field.onChange(parseFloat(e.target.value) || 7)}
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
+                name="rainfall"
+                render={({ field }) => (
+                  <FormItem className="md:col-span-2">
+                    <FormLabel>{t("rainfall")}</FormLabel>
+                    <FormControl>
+                      <Input 
+                        type="number" 
+                        step="0.1"
+                        {...field}
+                        onChange={(e) => field.onChange(parseFloat(e.target.value) || 0)}
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
               />
             </div>
-            <div className="space-y-2">
-              <Label htmlFor="phosphorus">{t("phosphorus")}</Label>
-              <Input
-                id="phosphorus"
-                type="number"
-                step="0.01"
-                value={phosphorus}
-                onChange={(e) => setPhosphorus(e.target.value)}
-                required
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="potassium">{t("potassium")}</Label>
-              <Input
-                id="potassium"
-                type="number"
-                step="0.01"
-                value={potassium}
-                onChange={(e) => setPotassium(e.target.value)}
-                required
-              />
-            </div>
-          </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label htmlFor="ph">{t("phLevel")}</Label>
-              <Input
-                id="ph"
-                type="number"
-                step="0.01"
-                min="0"
-                max="14"
-                value={ph}
-                onChange={(e) => setPh(e.target.value)}
-                required
-              />
+            <div className="flex items-center justify-between p-4 bg-muted rounded-lg">
+              <div className="flex items-center gap-2">
+                <MapPin className="h-5 w-5 text-primary" />
+                <span className="text-sm">
+                  {location
+                    ? `${t("location")}: ${location.lat.toFixed(2)}, ${location.lon.toFixed(2)}`
+                    : t("noLocation")}
+                </span>
+              </div>
+              <Button
+                type="button"
+                variant="outline"
+                onClick={getLocation}
+                disabled={fetchingLocation}
+              >
+                {fetchingLocation ? t("fetching") : t("getLocation")}
+              </Button>
             </div>
-            <div className="space-y-2">
-              <Label htmlFor="rainfall">{t("rainfall")}</Label>
-              <Input
-                id="rainfall"
-                type="number"
-                step="0.01"
-                value={rainfall}
-                onChange={(e) => setRainfall(e.target.value)}
-                required
-              />
-            </div>
-          </div>
 
-          <div className="flex items-center justify-between p-4 bg-muted rounded-lg">
-            <div className="flex items-center gap-2">
-              <MapPin className="h-5 w-5 text-primary" />
-              <span className="text-sm">
-                {location
-                  ? `${t("location")}: ${location.lat.toFixed(2)}, ${location.lon.toFixed(2)}`
-                  : t("noLocation")}
-              </span>
-            </div>
-            <Button
-              type="button"
-              variant="outline"
-              onClick={getLocation}
-              disabled={fetchingLocation}
-            >
-              {fetchingLocation ? t("fetching") : t("getLocation")}
+            <Button type="submit" className="w-full" disabled={loading || !location}>
+              {loading ? t("analyzing") : t("getRecommendation")}
             </Button>
-          </div>
-
-          <Button type="submit" className="w-full" disabled={loading || !location}>
-            {loading ? t("analyzing") : t("getRecommendation")}
-          </Button>
-        </form>
+          </form>
+        </Form>
       </CardContent>
     </Card>
   );

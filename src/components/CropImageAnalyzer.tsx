@@ -16,8 +16,28 @@ export const CropImageAnalyzer = () => {
   const handleImageUpload = async (file: File) => {
     if (!file.type.startsWith('image/')) {
       toast({
-        title: "Error",
-        description: "Please upload an image file",
+        title: "Invalid file type",
+        description: "Please upload an image file (JPG, PNG, GIF, WebP)",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    const maxSize = 10 * 1024 * 1024; // 10MB
+    if (file.size > maxSize) {
+      toast({
+        title: "File too large",
+        description: "Image must be less than 10MB",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    const validFormats = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
+    if (!validFormats.includes(file.type)) {
+      toast({
+        title: "Invalid image format",
+        description: "Please upload JPG, PNG, GIF, or WebP images only",
         variant: "destructive",
       });
       return;
