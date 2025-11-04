@@ -85,7 +85,7 @@ export const AuthForm = () => {
           <div className="flex justify-center mb-4">
             <Sprout className="h-12 w-12 text-primary" />
           </div>
-          <CardTitle className="text-2xl">{t("appTitle")}</CardTitle>
+          <CardTitle className="text-2xl">AiBased Crop Recommandation</CardTitle>
           <CardDescription>
             {isLogin ? t("signInPrompt") : t("signUpPrompt")}
           </CardDescription>
