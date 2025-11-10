@@ -16,6 +16,122 @@ const predictionSchema = z.object({
   humidity: z.number().min(0).max(100),
 });
 
+// Fertilizer recommendation logic based on NPK values
+const recommendFertilizer = (params: {
+  nitrogen: number;
+  phosphorus: number;
+  potassium: number;
+  ph: number;
+}) => {
+  const { nitrogen, phosphorus, potassium, ph } = params;
+  const recommendations = [];
+
+  // Nitrogen recommendations
+  if (nitrogen < 50) {
+    recommendations.push({
+      nutrient: "Nitrogen (N)",
+      status: "Low",
+      recommendation: "Apply urea (46-0-0) at 100-150 kg/ha or ammonium sulfate (21-0-0) at 200-250 kg/ha",
+      color: "red"
+    });
+  } else if (nitrogen < 80) {
+    recommendations.push({
+      nutrient: "Nitrogen (N)",
+      status: "Medium",
+      recommendation: "Apply urea (46-0-0) at 50-100 kg/ha or use organic compost",
+      color: "yellow"
+    });
+  } else {
+    recommendations.push({
+      nutrient: "Nitrogen (N)",
+      status: "Adequate",
+      recommendation: "Maintain current levels with regular organic matter additions",
+      color: "green"
+    });
+  }
+
+  // Phosphorus recommendations
+  if (phosphorus < 30) {
+    recommendations.push({
+      nutrient: "Phosphorus (P)",
+      status: "Low",
+      recommendation: "Apply single super phosphate (16% P2O5) at 150-200 kg/ha or DAP (18-46-0) at 100-150 kg/ha",
+      color: "red"
+    });
+  } else if (phosphorus < 50) {
+    recommendations.push({
+      nutrient: "Phosphorus (P)",
+      status: "Medium",
+      recommendation: "Apply single super phosphate at 75-100 kg/ha or bone meal",
+      color: "yellow"
+    });
+  } else {
+    recommendations.push({
+      nutrient: "Phosphorus (P)",
+      status: "Adequate",
+      recommendation: "No additional phosphorus fertilizer needed at this time",
+      color: "green"
+    });
+  }
+
+  // Potassium recommendations
+  if (potassium < 30) {
+    recommendations.push({
+      nutrient: "Potassium (K)",
+      status: "Low",
+      recommendation: "Apply muriate of potash (60% K2O) at 100-150 kg/ha or potassium sulfate at 125-175 kg/ha",
+      color: "red"
+    });
+  } else if (potassium < 50) {
+    recommendations.push({
+      nutrient: "Potassium (K)",
+      status: "Medium",
+      recommendation: "Apply muriate of potash at 50-75 kg/ha or wood ash",
+      color: "yellow"
+    });
+  } else {
+    recommendations.push({
+      nutrient: "Potassium (K)",
+      status: "Adequate",
+      recommendation: "Potassium levels are sufficient. Monitor and maintain",
+      color: "green"
+    });
+  }
+
+  // pH recommendations
+  if (ph < 5.5) {
+    recommendations.push({
+      nutrient: "pH Level",
+      status: "Too Acidic",
+      recommendation: "Apply agricultural lime at 2-4 tons/ha to raise pH. Retest after 6 months",
+      color: "red"
+    });
+  } else if (ph > 8.0) {
+    recommendations.push({
+      nutrient: "pH Level",
+      status: "Too Alkaline",
+      recommendation: "Apply sulfur at 200-400 kg/ha or gypsum to lower pH. Add organic matter",
+      color: "red"
+    });
+  } else if (ph < 6.0 || ph > 7.5) {
+    recommendations.push({
+      nutrient: "pH Level",
+      status: "Suboptimal",
+      recommendation: "Minor pH adjustment needed. Add compost and monitor regularly",
+      color: "yellow"
+    });
+  } else {
+    recommendations.push({
+      nutrient: "pH Level",
+      status: "Optimal",
+      recommendation: "pH is in the ideal range for most crops. Maintain current practices",
+      color: "green"
+    });
+  }
+
+  return recommendations;
+};
+
 // Simple crop recommendation logic based on NPK values and environmental conditions
 const predictCrop = (params: {
   nitrogen: number;
@@ -116,10 +232,13 @@ const predictCrop = (params: {
 
   console.log(`Crop prediction: ${bestCrop.name} with confidence ${confidence}`);
 
+  const fertilizerRecommendations = recommendFertilizer({ nitrogen, phosphorus, potassium, ph });
+
   return {
     crop: bestCrop.name,
     confidence: confidence,
     alternativeCrops: crops.slice(1, 3).map((c) => c.name),
+    fertilizer: fertilizerRecommendations,
   };
 };
 
