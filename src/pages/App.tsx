@@ -47,7 +47,7 @@ const AppPage = () => {
         <div className="container mx-auto px-4 py-4 flex items-center justify-between flex-wrap gap-2">
           <div className="flex items-center gap-2">
             <Sprout className="h-6 w-6 text-primary" />
-            <h1 className="text-xl font-bold">{t("appTitle")}</h1>
+            <h1 className="text-xl font-bold">Ai Based Crop Recommandation For Farmers</h1>
           </div>
           <div className="flex gap-2 flex-wrap">
             <VoiceControl onVoiceInput={handleVoiceInput} />
