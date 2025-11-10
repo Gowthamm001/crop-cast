@@ -122,23 +122,23 @@ const Result = () => {
             <CardContent className="space-y-3">
               <div className="flex justify-between">
                 <span>Nitrogen (N)</span>
-                <span className="font-semibold">{result.soil.nitrogen}</span>
+                <span className="font-semibold">{result.soil?.nitrogen || 'N/A'}</span>
               </div>
               <div className="flex justify-between">
                 <span>Phosphorus (P)</span>
-                <span className="font-semibold">{result.soil.phosphorus}</span>
+                <span className="font-semibold">{result.soil?.phosphorus || 'N/A'}</span>
               </div>
               <div className="flex justify-between">
                 <span>Potassium (K)</span>
-                <span className="font-semibold">{result.soil.potassium}</span>
+                <span className="font-semibold">{result.soil?.potassium || 'N/A'}</span>
               </div>
               <div className="flex justify-between">
                 <span>pH Level</span>
-                <span className="font-semibold">{result.soil.ph}</span>
+                <span className="font-semibold">{result.soil?.ph || 'N/A'}</span>
               </div>
               <div className="flex justify-between">
                 <span>Rainfall</span>
-                <span className="font-semibold">{result.soil.rainfall} mm</span>
+                <span className="font-semibold">{result.soil?.rainfall ? `${result.soil.rainfall} mm` : 'N/A'}</span>
               </div>
             </CardContent>
           </Card>
