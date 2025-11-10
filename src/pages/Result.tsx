@@ -11,7 +11,7 @@ const Result = () => {
   const location = useLocation();
   const navigate = useNavigate();
   const { toast } = useToast();
-  const result = location.state;
+  const result = location.state?.result;
 
   useEffect(() => {
     if (result) {
