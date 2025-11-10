@@ -26,14 +26,14 @@ const Result = () => {
 
       const { error } = await supabase.from("crop_predictions").insert({
         user_id: user.id,
-        nitrogen: parseFloat(result.soil.nitrogen),
-        phosphorus: parseFloat(result.soil.phosphorus),
-        potassium: parseFloat(result.soil.potassium),
-        ph_value: parseFloat(result.soil.ph),
-        rainfall: parseFloat(result.soil.rainfall),
-        temperature: result.weather.temperature,
-        humidity: result.weather.humidity,
-        predicted_crop: result.crop,
+        nitrogen: parseFloat(result.soil?.nitrogen || 0),
+        phosphorus: parseFloat(result.soil?.phosphorus || 0),
+        potassium: parseFloat(result.soil?.potassium || 0),
+        ph_value: parseFloat(result.soil?.ph || 0),
+        rainfall: parseFloat(result.soil?.rainfall || 0),
+        temperature: result.weather?.temperature || 0,
+        humidity: result.weather?.humidity || 0,
+        predicted_crop: result.crop || '',
       });
 
       if (error) throw error;
@@ -95,14 +95,14 @@ const Result = () => {
               <div className="text-center p-4 bg-muted/50 rounded-lg">
                 <Thermometer className="h-8 w-8 text-orange-500 mx-auto mb-2" />
                 <p className="text-sm text-muted-foreground mb-1">Temperature</p>
-                <p className="text-2xl font-bold">{result.weather.temperature}°C</p>
+                <p className="text-2xl font-bold">{result.weather?.temperature || 'N/A'}°C</p>
               </div>
               <div className="text-center p-4 bg-muted/50 rounded-lg">
                 <Droplets className="h-8 w-8 text-blue-500 mx-auto mb-2" />
                 <p className="text-sm text-muted-foreground mb-1">Humidity</p>
-                <p className="text-2xl font-bold">{result.weather.humidity}%</p>
+                <p className="text-2xl font-bold">{result.weather?.humidity || 'N/A'}%</p>
               </div>
-              {result.weather.description && (
+              {result.weather?.description && (
                 <div className="text-center p-4 bg-muted/50 rounded-lg col-span-2">
                   <Cloud className="h-8 w-8 text-gray-500 mx-auto mb-2" />
                   <p className="text-sm text-muted-foreground mb-1">Conditions</p>
